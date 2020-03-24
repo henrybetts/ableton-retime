@@ -1,22 +1,21 @@
 import gzip
 from xml.etree import ElementTree
+import argparse
 
-if __name__ == '__main__':
-    filename = 'example Project/example.als'
-    target_filename = 'example Project/example retimed.als'
-    current_bpm = 120
-    target_bpm = 80
+
+def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
+    with gzip.open(source_file) as f:
+        tree = ElementTree.parse(f)
+
+    print(f'Opened project "{source_file}"')
+
     scale_factor = target_bpm / current_bpm
+    print(f'Scale factor: {target_bpm} / {current_bpm} = {scale_factor * 100}%')
 
     def scale_attrib(el, attrib):
         value = el.get(attrib)
         if value is not None:
             el.set(attrib, str(float(value) * scale_factor))
-
-    with gzip.open(filename) as f:
-        tree = ElementTree.parse(f)
-
-    print(f'Opened {filename}')
 
     for clip in tree.iter():
         if clip.tag in ('MidiClip', 'AudioClip'):
@@ -43,7 +42,24 @@ if __name__ == '__main__':
                 scale_attrib(clip.find('./Loop/HiddenLoopStart'), 'Value')
                 scale_attrib(clip.find('./Loop/HiddenLoopEnd'), 'Value')
 
-    with gzip.open(target_filename, 'wb') as f:
+    with gzip.open(target_file, 'wb') as f:
         tree.write(f, encoding='UTF-8', xml_declaration=True)
 
-    print(f'Saved to {target_filename}')
+    print(f'Saved retimed project to "{target_file}"')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Retime an Ableton Live project.')
+    parser.add_argument('source_file', help='The path of the project to read.')
+    parser.add_argument('target_file', help='The path at which to save the retimed project.')
+    parser.add_argument('--current-bpm', type=int, required=True, help="The project's current bpm value.")
+    parser.add_argument('--target-bpm', type=int, required=True, help='The target bpm value.')
+
+    args = parser.parse_args()
+
+    ableton_retime(
+        source_file=args.source_file,
+        target_file=args.target_file,
+        current_bpm=args.current_bpm,
+        target_bpm=args.target_bpm
+    )
