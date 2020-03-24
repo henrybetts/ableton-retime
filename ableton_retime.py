@@ -16,12 +16,13 @@ def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
 
     def scale_attrib(el, attrib):
         nonlocal count
-        value = el.get(attrib)
-        if value is not None:
-            value = float(value)
-            if value != -63072000:
-                el.set(attrib, str(value * scale_factor))
-                count += 1
+        if el is not None:
+            value = el.get(attrib)
+            if value is not None:
+                value = float(value)
+                if value != -63072000:
+                    el.set(attrib, str(value * scale_factor))
+                    count += 1
 
     for el in tree.iter():
         if el.tag in ('MidiClip', 'AudioClip'):
@@ -31,9 +32,6 @@ def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
             scale_attrib(clip, 'Time')
             scale_attrib(clip.find('CurrentStart'), 'Value')
             scale_attrib(clip.find('CurrentEnd'), 'Value')
-
-            for warp_marker in clip.findall('./WarpMarkers/WarpMarker'):
-                scale_attrib(warp_marker, 'BeatTime')
 
             if is_warped:
                 scale_attrib(clip.find('./Loop/LoopStart'), 'Value')
@@ -46,6 +44,10 @@ def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
             event = el
             scale_attrib(event, 'Time')
             scale_attrib(event, 'Duration')
+
+        elif el.tag == 'WarpMarker':
+            marker = el
+            scale_attrib(marker, 'BeatTime')
 
     print(f'Retimed {count} attributes')
 
