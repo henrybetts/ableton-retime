@@ -12,25 +12,25 @@ def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
     scale_factor = target_bpm / current_bpm
     print(f'Scale factor: {target_bpm} / {current_bpm} = {scale_factor * 100}%')
 
+    count = 0
+
     def scale_attrib(el, attrib):
+        nonlocal count
         value = el.get(attrib)
         if value is not None:
-            el.set(attrib, str(float(value) * scale_factor))
+            value = float(value)
+            if value != -63072000:
+                el.set(attrib, str(value * scale_factor))
+                count += 1
 
-    for clip in tree.iter():
-        if clip.tag in ('MidiClip', 'AudioClip'):
-            name = clip.find('Name').get('Value')
+    for el in tree.iter():
+        if el.tag in ('MidiClip', 'AudioClip'):
+            clip = el
             is_warped = clip.find('IsWarped').get('Value') == 'true'
-
-            print(f'Found {"warped" if is_warped else "unwarped"} {clip.tag} "{name}"')
 
             scale_attrib(clip, 'Time')
             scale_attrib(clip.find('CurrentStart'), 'Value')
             scale_attrib(clip.find('CurrentEnd'), 'Value')
-
-            for midi_note in clip.findall('./Notes//MidiNoteEvent'):
-                scale_attrib(midi_note, 'Time')
-                scale_attrib(midi_note, 'Duration')
 
             for warp_marker in clip.findall('./WarpMarkers/WarpMarker'):
                 scale_attrib(warp_marker, 'BeatTime')
@@ -41,6 +41,13 @@ def ableton_retime(*, source_file, target_file, current_bpm, target_bpm):
                 scale_attrib(clip.find('./Loop/OutMarker'), 'Value')
                 scale_attrib(clip.find('./Loop/HiddenLoopStart'), 'Value')
                 scale_attrib(clip.find('./Loop/HiddenLoopEnd'), 'Value')
+
+        elif el.tag in ('MidiNoteEvent', 'FloatEvent', 'BoolEvent', 'EnumEvent'):
+            event = el
+            scale_attrib(event, 'Time')
+            scale_attrib(event, 'Duration')
+
+    print(f'Retimed {count} attributes')
 
     with gzip.open(target_file, 'wb') as f:
         tree.write(f, encoding='UTF-8', xml_declaration=True)
