@@ -16,42 +16,34 @@ if __name__ == '__main__':
     with gzip.open(filename) as f:
         tree = ElementTree.parse(f)
 
-    for midi_clip in tree.iter('MidiClip'):
-        scale_attrib(midi_clip, 'Time')
+    print(f'Opened {filename}')
 
-        for current_start in midi_clip.iter('CurrentStart'):
-            scale_attrib(current_start, 'Value')
+    for clip in tree.iter():
+        if clip.tag in ('MidiClip', 'AudioClip'):
+            name = clip.find('Name').get('Value')
+            is_warped = clip.find('IsWarped').get('Value') == 'true'
 
-        for current_end in midi_clip.iter('CurrentEnd'):
-            scale_attrib(current_end, 'Value')
+            print(f'Found {"warped" if is_warped else "unwarped"} {clip.tag} "{name}"')
 
-        for current_end in midi_clip.iter('LoopStart'):
-            scale_attrib(current_end, 'Value')
+            scale_attrib(clip, 'Time')
+            scale_attrib(clip.find('CurrentStart'), 'Value')
+            scale_attrib(clip.find('CurrentEnd'), 'Value')
 
-        for current_end in midi_clip.iter('LoopEnd'):
-            scale_attrib(current_end, 'Value')
+            for midi_note in clip.findall('./Notes//MidiNoteEvent'):
+                scale_attrib(midi_note, 'Time')
+                scale_attrib(midi_note, 'Duration')
 
-        for current_end in midi_clip.iter('OutMarker'):
-            scale_attrib(current_end, 'Value')
+            for warp_marker in clip.findall('./WarpMarkers/WarpMarker'):
+                scale_attrib(warp_marker, 'BeatTime')
 
-        for current_end in midi_clip.iter('HiddenLoopStart'):
-            scale_attrib(current_end, 'Value')
-
-        for current_end in midi_clip.iter('HiddenLoopEnd'):
-            scale_attrib(current_end, 'Value')
-
-        for midi_note in midi_clip.iter('MidiNoteEvent'):
-            scale_attrib(midi_note, 'Time')
-            scale_attrib(midi_note, 'Duration')
-
-    for audio_clip in tree.iter('AudioClip'):
-        scale_attrib(audio_clip, 'Time')
-
-        for current_start in audio_clip.iter('CurrentStart'):
-            scale_attrib(current_start, 'Value')
-
-        for current_end in audio_clip.iter('CurrentEnd'):
-            scale_attrib(current_end, 'Value')
+            if is_warped:
+                scale_attrib(clip.find('./Loop/LoopStart'), 'Value')
+                scale_attrib(clip.find('./Loop/LoopEnd'), 'Value')
+                scale_attrib(clip.find('./Loop/OutMarker'), 'Value')
+                scale_attrib(clip.find('./Loop/HiddenLoopStart'), 'Value')
+                scale_attrib(clip.find('./Loop/HiddenLoopEnd'), 'Value')
 
     with gzip.open(target_filename, 'wb') as f:
         tree.write(f, encoding='UTF-8', xml_declaration=True)
+
+    print(f'Saved to {target_filename}')
