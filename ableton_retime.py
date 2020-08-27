@@ -61,8 +61,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Retime an Ableton Live project.')
     parser.add_argument('source_file', help='The path of the project to read.')
     parser.add_argument('target_file', help='The path at which to save the retimed project.')
-    parser.add_argument('--current-bpm', type=int, required=True, help="The project's current bpm value.")
-    parser.add_argument('--target-bpm', type=int, required=True, help='The target bpm value.')
+    parser.add_argument('--current-bpm', type=float, required=True, help="The project's current bpm value.")
+    parser.add_argument('--target-bpm', type=float, required=True, help='The target bpm value.')
 
     args = parser.parse_args()
 
